@@ -1,0 +1,37 @@
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    color: #333333;
+  }
+  
+  th, td {
+    padding: 8px;
+    text-align: left;
+  }
+  
+  th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+  }
+  
+  tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  
+  #location {
+    font-weight: ;
+  }
+  
+  #currentWeather {
+    text-transform: ;
+  }
+  
+  #highTemperature, #lowTemperature {
+    font-weight: ;
+  }
+  
+  #humidity {
+    font-style: ;
+  }
