@@ -7,6 +7,12 @@ const errorContainer = document.getElementById('errorContainer');
 // Add event listener to the submit button
 submitButton.addEventListener('click', convertInputToCoordinates);
 
+locationInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    convertInputToCoordinates();
+  }
+});
+
 // Function to check if the input is in coordinate format
 function isCoordinate(input) {
   return /^[-]?\d+(\.\d+)?,[-]?\d+(\.\d+)?$/.test(input);
@@ -61,24 +67,47 @@ function displayResult(coordinates) {
 // Function to fetch weather data from Open-Meteo API
 async function getWeatherData(coordinates) {
   try {
-    const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coordinates.lat}&longitude=${coordinates.lng}&windspeed_unit=mph&timezone=auto&temperature_unit=fahrenheit&daily=weathercode,uv_index_max&current_weather=true&hourly=relativehumidity_2m,uv_index`);
+    const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coordinates.lat}&longitude=${coordinates.lng}&windspeed_unit=mph&timezone=auto&temperature_unit=fahrenheit&daily=weathercode&current_weather=true&hourly=relativehumidity_2m,uv_index`);
 
     // Process the response and extract relevant data
     const data = await response.json();
     console.log('API response:', data);
     const currentWeather = data.current_weather;
+    const hours = data.hourly.time;
     const hourlyHumidity = data.hourly.relativehumidity_2m;
+    const hourlyUv = data.hourly.uv_index;
 
     // Call a function to render the weather information on the page
-    renderWeatherData(currentWeather, hourlyHumidity, coordinates);
+    renderWeatherData(currentWeather, hours, hourlyUv, hourlyHumidity, coordinates);
   } catch (error) {
     console.log('Error fetching weather data:', error);
   }
 }
-  
+
+function getTime(hours) {
+  // Get the current date and time
+  const currentTime = new Date();
+
+  // Get the current hour
+  const currentHour = currentTime.getHours();
+
+  // Find the index of the closest time in the hours array
+  const closestTimeIndex = hours.findIndex(time => {
+    // Parse the time in the hours array to get its hour
+    const timeInArray = new Date(time);
+    const hourInArray = timeInArray.getHours();
+
+    // Check if the current hour and hour in the array are the same
+    return currentHour === hourInArray;
+  });
+
+  // Return the corresponding index
+  return closestTimeIndex;
+}
 
 // Function to render the weather information on the page
-function renderWeatherData(weatherData, hourlyHumidity, coordinates) {
+function renderWeatherData(weatherData,hours, hourlyUv, hourlyHumidity, coordinates) {
+  const closestTimeIndex = getTime(hours);
   // Access the DOM element to display the weather information
   const weatherContainer = document.getElementById('weather-container');
   // Create HTML markup to display the weather data
@@ -86,9 +115,9 @@ function renderWeatherData(weatherData, hourlyHumidity, coordinates) {
       <div class="weather-info">
           <h3 class="temperature"> Temperature: ${weatherData.temperature}°F</h3>
           <p class="weathercode">Weather: ${getWeatherDescription(weatherData.weathercode)}</p>
-          <p class="humidity"> Humidity: ${getCurrentHumidity(hourlyHumidity)}%</p>
+          <p class="humidity"> Humidity: ${hourlyHumidity[getTime(hours)]}%</p>
           <p class="wind">Wind: ${weatherData.windspeed} mph</p>
-          <p class="uv">UV: ${weatherData.daily?.uv_index_max[0]}</p>
+          <p class="uv"> UV index: ${hourlyUv[getTime(hours)]}</p>
           </div>
   `;
 
@@ -97,6 +126,8 @@ function renderWeatherData(weatherData, hourlyHumidity, coordinates) {
 
   // Call the function to fetch and display the forecast data
   getForecastData(coordinates);
+
+  aqi(coordinates, hours);
 }
 
 function getWeatherDescription(weatherCode) {
@@ -122,18 +153,6 @@ function getWeatherDescription(weatherCode) {
   return weatherDescriptions[weatherCode] || 'Unknown';
 }
 
-
-function getCurrentHumidity(hourlyHumidity) {
-  // Get the current date and time in the format "YYYY-MM-DDTHH:mm"
-  const currentTime = new Date().toISOString().slice(0, 16);
-
-  // Find the index of the closest time in the hourly humidity data
-  const closestTimeIndex = hourlyHumidity.findIndex((data) => data.time === currentTime);
-
-  // Return the corresponding humidity value for the closest time
-  return closestTimeIndex !== -1 ? hourlyHumidity[closestTimeIndex].relativehumidity_2m + '%' : 'N/A';
-}
-
 // Function to display an error message
 function displayError(message) {
     coordinatesContainer.textContent = ''; // Clear any previous coordinates
@@ -151,6 +170,8 @@ try {
   const hourlyForecast = data.hourly;
   const temperature = hourlyForecast.temperature_2m;
   const precipitation = hourlyForecast.precipitation_probability;
+  const hours = hourlyForecast.time;
+
 
   // Access the DOM element to display the forecast table
   const forecastContainer = document.getElementById('forecast-container');
@@ -175,13 +196,7 @@ try {
 
   table.appendChild(headerRow);
 
-  // Find the current hour index
-  const currentTime = new Date();
-  const currentHour = currentTime.getHours();
-  const currentIndex = hourlyForecast.time.findIndex(time => {
-    const forecastTime = new Date(time);
-    return forecastTime.getHours() > currentHour;
-  });
+  const currentIndex = getTime(hours);
 
   // If the current hour is the last in the forecast, start from the beginning
   const nextIndex = currentIndex === -1 ? 0 : currentIndex;
@@ -213,10 +228,68 @@ try {
   // Clear any previous forecast data
   forecastContainer.innerHTML = '';
 
+  const moreContainer = document.getElementById('more-container');
+  // link to daily forecast html page
+  const html = `
+      <div class="daily-link">
+        <a href="/about.html">About Us</a>
+          </div>
+  `;
+
+  // Set the HTML content of the weather container
+  weatherContainer.innerHTML = html;
+
   // Append the forecast table to the forecast container
   forecastContainer.appendChild(table);
 } catch (error) {
   console.log('Error fetching forecast data:', error);
 }
+}
+
+async function aqi(coordinates, hours) {
+  try {
+    const response = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${coordinates.lat}&longitude=${coordinates.lng}&hourly=us_aqi`);
+
+    const data = await response.json();
+    console.log('API response:', data);
+    const aqi = data.hourly.us_aqi;
+
+    // Get the index of the closest time
+    const closestTimeIndex = getTime(hours);
+
+    // Get the AQI value for the current hour
+    const currentAQI = aqi[closestTimeIndex];
+
+    // Display a descriptive message for the AQI value
+    let aqiMessage;
+    if (currentAQI <= 50) {
+      aqiMessage = 'Good';
+    } else if (currentAQI <= 100) {
+      aqiMessage = 'Moderate';
+    } else if (currentAQI <= 150) {
+      aqiMessage = 'Unhealthy for Sensitive Groups';
+    } else if (currentAQI <= 200) {
+      aqiMessage = 'Unhealthy';
+    } else if (currentAQI <= 300) {
+      aqiMessage = 'Very Unhealthy';
+    } else {
+      aqiMessage = 'Hazardous';
+    }
+
+    // Access the DOM element to display the AQI information
+    const aqiContainer = document.getElementById('air-quality-container');
+
+    // Create HTML markup to display the AQI data
+    const html = `
+      <div class="aqi-info">
+        <p>AQI: ${currentAQI}</p>
+        <p>${aqiMessage}</p>
+      </div>
+    `;
+
+    aqiContainer.innerHTML = html;
+  } catch (error) {
+    console.log('Error fetching AQI data:', error);
+  }
 }
 
