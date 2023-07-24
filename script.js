@@ -1,4 +1,4 @@
-  // Get DOM elements
+  // DOM elements
   const submitButton = document.getElementById('submitButton');
   const locationInput = document.getElementById('locationInput');
   const coordinatesContainer = document.getElementById('coordinatesContainer');
@@ -112,19 +112,31 @@ function getTime(hours) {
 
 // Function to render the weather information on the page
 function renderWeatherData(weatherData,hours, hourlyUv, hourlyHumidity, coordinates) {
-  const closestTimeIndex = getTime(hours);
   // Access the DOM element to display the weather information
   const weatherContainer = document.getElementById('weather-container');
   // Create HTML markup to display the weather data
   const html = `
-      <div class="weather-info">
-          <h3 class="temperature"> Temperature: ${weatherData.temperature}°F</h3>
-          <p class="weathercode">Weather: ${getWeatherDescription(weatherData.weathercode)}</p>
-          <p class="humidity"> Humidity: ${hourlyHumidity[getTime(hours)]}%</p>
-          <p class="wind">Wind: ${weatherData.windspeed} mph</p>
-          <p class="uv"> UV index: ${hourlyUv[getTime(hours)]}</p>
-          </div>
-  `;
+    <div class="weather-info">
+      <div class="info-label">Temperature:</div>
+      <div class="info-data">${weatherData.temperature}°F</div>
+    </div>
+    <div class="weather-info">
+      <div class="info-label">Weather:</div>
+      <div class="info-data">${getWeatherDescription(weatherData.weathercode)}</div>
+    </div>
+    <div class="weather-info">
+      <div class="info-label">Humidity:</div>
+      <div class="info-data">${hourlyHumidity[getTime(hours)]}%</div>
+    </div>
+    <div class="weather-info">
+      <div class="info-label">Wind:</div>
+      <div class="info-data">${weatherData.windspeed} mph</div>
+    </div>
+    <div class="weather-info">
+      <div class="info-label">UV Index:</div>
+      <div class="info-data">${hourlyUv[getTime(hours)]}</div>
+    </div>
+      `;
 
   // Set the HTML content of the weather container
   weatherContainer.innerHTML = html;
@@ -135,7 +147,7 @@ function renderWeatherData(weatherData,hours, hourlyUv, hourlyHumidity, coordina
   aqi(coordinates, hours);
 }
 
-
+//Function for weather code interpretation 
 function getWeatherDescription(weatherCode) {
   const weatherDescriptions = {
     0: 'Clear sky',
@@ -239,7 +251,7 @@ try {
   forecastContainer.appendChild(table);
 
   const moreContainer = document.getElementById('more-container');
-  // link to daily forecast html page
+  // link to daily forecast html page with url id
   const html = `
       <div class="daily-link">
         <a href="daily.html?lat=${coordinates.lat}&lng=${coordinates.lng}">View Daily Forecast</a>
@@ -253,6 +265,7 @@ try {
 }
 }
 
+//function to fetch aqi data and display description based on index
 async function aqi(coordinates, hours) {
   try {
     const response = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${coordinates.lat}&longitude=${coordinates.lng}&hourly=us_aqi`);
@@ -285,7 +298,7 @@ async function aqi(coordinates, hours) {
 
     // Access the DOM element to display the AQI information
     const aqiContainer = document.getElementById('air-quality-container');
-
+    
     // Create HTML markup to display the AQI data
     const html = `
       <div class="aqi-info">
